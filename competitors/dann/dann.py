@@ -8,15 +8,22 @@ from torch.optim.sgd import SGD
 from torchvision import transforms
 from tqdm import tqdm
 
-from dataset import PixelSetData
-from evaluation import validation
-from transforms import Normalize, RandomSamplePixels, RandomSampleTimeSteps, ToTensor, RandomTemporalShift, Identity
-from utils.metrics import accuracy
-from utils.train_utils import AverageMeter, cycle, to_cuda, cat_samples
+from ...dataset import PixelSetData
+from ...evaluation import validation
+from ...transforms import (
+    Normalize,
+    RandomSamplePixels,
+    RandomSampleTimeSteps,
+    ToTensor,
+    RandomTemporalShift,
+    Identity,
+)
+from ...utils.metrics import accuracy
+from ...utils.train_utils import AverageMeter, cycle, to_cuda, cat_samples
 from typing import List, Dict, Optional
 import torch.nn as nn
 import torch.nn.functional as F
-from competitors.dann.grl import WarmStartGradientReverseLayer
+from ...competitors.dann.grl import WarmStartGradientReverseLayer
 import numpy as np
 
 
@@ -175,7 +182,9 @@ def get_data_loaders(splits, config):
         [
             RandomSamplePixels(config.num_pixels),
             RandomSampleTimeSteps(config.seq_length),
-            RandomTemporalShift(max_shift=config.max_shift_aug, p=config.shift_aug_p) if config.with_shift_aug else Identity(),
+            RandomTemporalShift(max_shift=config.max_shift_aug, p=config.shift_aug_p)
+            if config.with_shift_aug
+            else Identity(),
             Normalize(),
             ToTensor(),
         ]

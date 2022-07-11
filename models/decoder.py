@@ -1,5 +1,5 @@
 import torch.nn as nn
-from models.layers import LinearLayer
+from .layers import LinearLayer
 
 
 def get_decoder(n_neurons, n_classes):

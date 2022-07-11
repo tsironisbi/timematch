@@ -2,6 +2,8 @@ import os
 import csv
 import yaml
 
+from .. import TIMEMATCH_ROOT
+
 def get_classes(*countries, method=set.union, combine_spring_and_winter=False):
     class_sets = []
     for country in countries:
@@ -12,7 +14,7 @@ def get_classes(*countries, method=set.union, combine_spring_and_winter=False):
     return classes
 
 def read_yaml_class_mapping(country):
-    return yaml.load(open(os.path.join('class_mapping', f'{country}_class_mapping.yml')), Loader=yaml.FullLoader)
+    return yaml.load(open(os.path.join(TIMEMATCH_ROOT, 'class_mapping', f'{country}_class_mapping.yml')), Loader=yaml.FullLoader)
 
 def get_code_to_class(country, combine_spring_and_winter=False):
     class_mapping = read_yaml_class_mapping(country)

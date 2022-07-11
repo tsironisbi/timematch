@@ -2,11 +2,11 @@ from copy import deepcopy
 
 import torch.nn as nn
 
-from models.competings import GRU, TempConv
-from models.decoder import get_decoder
-from models.ltae import LTAE
-from models.pse import PixelSetEncoder
-from models.tae import TemporalAttentionEncoder
+from .competings import GRU, TempConv
+from .decoder import get_decoder
+from .ltae import LTAE
+from .pse import PixelSetEncoder
+from .tae import TemporalAttentionEncoder
 
 
 class PseLTae(nn.Module):

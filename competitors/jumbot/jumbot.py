@@ -23,25 +23,36 @@ import torch.utils.data
 from torchvision import transforms
 from tqdm import tqdm
 
-from dataset import PixelSetData
-from evaluation import validation
-from transforms import Normalize, RandomSamplePixels, RandomSampleTimeSteps, ToTensor, RandomTemporalShift, Identity
-from utils.metrics import accuracy
-from utils.train_utils import AverageMeter, cat_samples, cycle, to_cuda
+from ...dataset import PixelSetData
+from ...evaluation import validation
+from ...transforms import (
+    Normalize,
+    RandomSamplePixels,
+    RandomSampleTimeSteps,
+    ToTensor,
+    RandomTemporalShift,
+    Identity,
+)
+from ...utils.metrics import accuracy
+from ...utils.train_utils import AverageMeter, cat_samples, cycle, to_cuda
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def train_jumbot(model, config, writer, val_loader, device, best_model_path, fold_num, splits):
-    source_loader, target_loader = get_data_loaders(splits, config, source_balanced=False)
+
+def train_jumbot(
+    model, config, writer, val_loader, device, best_model_path, fold_num, splits
+):
+    source_loader, target_loader = get_data_loaders(
+        splits, config, source_balanced=False
+    )
 
     model.to(device)
     if config.weights is not None:
         pretrained_path = f"{config.weights}/fold_{fold_num}"
         pretrained_weights = torch.load(f"{pretrained_path}/model.pt")["state_dict"]
         model.load_state_dict(pretrained_weights)
-        print('using pretrained weights', config.weights)
-
+        print("using pretrained weights", config.weights)
 
     base_lr = 1.0
     classifier_params = [
@@ -68,7 +79,10 @@ def train_jumbot(model, config, writer, val_loader, device, best_model_path, fol
 
     source_iter, target_iter = iter(cycle(source_loader)), iter(cycle(target_loader))
     for epoch in range(config.epochs):
-        progress_bar = tqdm(range(config.steps_per_epoch), desc=f'JUMBOT Epoch {epoch + 1}/{config.epochs}')
+        progress_bar = tqdm(
+            range(config.steps_per_epoch),
+            desc=f"JUMBOT Epoch {epoch + 1}/{config.epochs}",
+        )
 
         losses = AverageMeter()
         class_accs = AverageMeter()
@@ -84,25 +98,33 @@ def train_jumbot(model, config, writer, val_loader, device, best_model_path, fol
 
             cls_loss = criterion(y_s, labels_s)
 
-            one_hot_labels_s = F.one_hot(labels_s, num_classes=config.num_classes).float()
-            M_embed = torch.cdist(f_s, f_t)**2  # term on embedded data
-            M_sce = - torch.mm(one_hot_labels_s, torch.transpose(torch.log(pred_x_t), 0, 1))  # term on labels
-            M = config.eta1 * M_embed + config.eta2 * M_sce  
+            one_hot_labels_s = F.one_hot(
+                labels_s, num_classes=config.num_classes
+            ).float()
+            M_embed = torch.cdist(f_s, f_t) ** 2  # term on embedded data
+            M_sce = -torch.mm(
+                one_hot_labels_s, torch.transpose(torch.log(pred_x_t), 0, 1)
+            )  # term on labels
+            M = config.eta1 * M_embed + config.eta2 * M_sce
             # M_normalized = M / M.max()  # normalize by max to avoid numerical issues
 
-            #OT computation
+            # OT computation
             a, b = ot.unif(f_s.size()[0]), ot.unif(f_t.size()[0])
-            pi = ot.unbalanced.sinkhorn_knopp_unbalanced(a, b, M.detach().cpu().numpy(), config.epsilon, config.tau)
-            # To get DeepJDOT (https://arxiv.org/abs/1803.10081) comment the line above 
+            pi = ot.unbalanced.sinkhorn_knopp_unbalanced(
+                a, b, M.detach().cpu().numpy(), config.epsilon, config.tau
+            )
+            # To get DeepJDOT (https://arxiv.org/abs/1803.10081) comment the line above
             # and uncomment the following line:
-            #pi = ot.emd(a, b, M.detach().cpu().numpy())
-            pi = torch.from_numpy(pi).float().cuda() # Transport plan between minibatches
+            # pi = ot.emd(a, b, M.detach().cpu().numpy())
+            pi = (
+                torch.from_numpy(pi).float().cuda()
+            )  # Transport plan between minibatches
             transfer_loss = torch.sum(pi * M)
 
             # if global_step % 100 == 0:
             #     print(torch.sum(pi), transfer_loss, torch.min(M), torch.min(M_embed), torch.min(M_sce))
 
-            # train the model 
+            # train the model
             tot_loss = cls_loss + transfer_loss
             optimizer.zero_grad()
             tot_loss.backward()
@@ -126,27 +148,41 @@ def train_jumbot(model, config, writer, val_loader, device, best_model_path, fol
 
         progress_bar.close()
         model.eval()
-        best_f1 = validation(best_f1, None, config, criterion, device, epoch, model, val_loader, writer)
+        best_f1 = validation(
+            best_f1, None, config, criterion, device, epoch, model, val_loader, writer
+        )
 
     # save final model and use for evaluation
-    torch.save({'state_dict': model.state_dict()}, best_model_path)
+    torch.save({"state_dict": model.state_dict()}, best_model_path)
 
 
 def get_data_loaders(splits, config, source_balanced=False):
-    train_transform = transforms.Compose([
+    train_transform = transforms.Compose(
+        [
             RandomSamplePixels(config.num_pixels),
             RandomSampleTimeSteps(config.seq_length),
-            RandomTemporalShift(max_shift=config.max_shift_aug, p=config.shift_aug_p) if config.with_shift_aug else Identity(),
+            RandomTemporalShift(max_shift=config.max_shift_aug, p=config.shift_aug_p)
+            if config.with_shift_aug
+            else Identity(),
             Normalize(),
             ToTensor(),
-    ])
+        ]
+    )
 
-    source_dataset = PixelSetData(config.data_root, config.source, config.classes, train_transform, indices=splits[config.source]['train'])
+    source_dataset = PixelSetData(
+        config.data_root,
+        config.source,
+        config.classes,
+        train_transform,
+        indices=splits[config.source]["train"],
+    )
 
     if source_balanced:
         print("using balanced loader for source")
         source_labels = source_dataset.get_labels()
-        train_batch_sampler = BalancedBatchSampler(source_labels, batch_size=config.batch_size)
+        train_batch_sampler = BalancedBatchSampler(
+            source_labels, batch_size=config.batch_size
+        )
 
         source_loader = data.DataLoader(
             source_dataset,
@@ -164,8 +200,13 @@ def get_data_loaders(splits, config, source_balanced=False):
             drop_last=True,
         )
 
-
-    target_dataset = PixelSetData(config.data_root, config.target, config.classes, train_transform, indices=splits[config.target]['train'])
+    target_dataset = PixelSetData(
+        config.data_root,
+        config.target,
+        config.classes,
+        train_transform,
+        indices=splits[config.target]["train"],
+    )
     target_loader = torch.utils.data.DataLoader(
         target_dataset,
         num_workers=config.num_workers,
@@ -175,8 +216,12 @@ def get_data_loaders(splits, config, source_balanced=False):
         drop_last=True,
     )
 
-    print(f'size of source dataset: {len(source_dataset)} ({len(source_loader)} batches)')
-    print(f'size of target dataset: {len(target_dataset)} ({len(target_loader)} batches)')
+    print(
+        f"size of source dataset: {len(source_dataset)} ({len(source_loader)} batches)"
+    )
+    print(
+        f"size of target dataset: {len(target_dataset)} ({len(target_loader)} batches)"
+    )
 
     return source_loader, target_loader
 

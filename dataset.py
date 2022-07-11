@@ -11,14 +11,14 @@ from torch.utils.data import ConcatDataset, DataLoader, Subset
 from torchvision.transforms import transforms
 import zarr
 
-from transforms import (
+from .transforms import (
     Identity,
     Normalize,
     RandomSamplePixels,
     RandomSampleTimeSteps,
     ToTensor,
 )
-from utils import label_utils
+from .utils import label_utils
 
 
 class PixelSetData(data.Dataset):
@@ -74,7 +74,8 @@ class PixelSetData(data.Dataset):
             "parcel_index": parcel_idx,  # mapping to metadata
             "pixels": pixels,
             "valid_pixels": np.ones(
-                (pixels.shape[0], pixels.shape[-1]), dtype=np.float32),
+                (pixels.shape[0], pixels.shape[-1]), dtype=np.float32
+            ),
             "positions": np.array(self.date_positions),
             "extra": np.array(extra),
             "label": y,
@@ -107,7 +108,7 @@ class PixelSetData(data.Dataset):
                 unknown_crop_codes.add(crop_code)
             class_name = code_to_class_name.get(crop_code, "unknown")
             class_index = class_to_idx.get(class_name, class_to_idx["unknown"])
-            extra = parcel['geometric_features']
+            extra = parcel["geometric_features"]
 
             item = (parcel_path, parcel_idx, class_index, extra)
             instances.append(item)
@@ -425,6 +426,8 @@ class InfiniteSliceIterator:
 
 if __name__ == "__main__":
     classes = label_utils.get_classes("france")
-    dataset = PixelSetData("/media/data/mark_pixels", "france/31TCJ/2017", classes, with_extra=True)
+    dataset = PixelSetData(
+        "/media/data/mark_pixels", "france/31TCJ/2017", classes, with_extra=True
+    )
     print(dataset[0])
     print(dataset.date_positions)

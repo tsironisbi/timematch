@@ -8,13 +8,13 @@ from torch.optim.sgd import SGD
 from torchvision import transforms
 from tqdm import tqdm
 
-from competitors.mmd.dan import MultipleKernelMaximumMeanDiscrepancy
-from competitors.mmd.kernels import GaussianKernel
-from dataset import PixelSetData
-from evaluation import validation
-from transforms import Normalize, RandomSamplePixels, RandomSampleTimeSteps, ToTensor, RandomTemporalShift, Identity
-from utils.train_utils import AverageMeter, cat_samples, cycle, to_cuda
-from utils.metrics import accuracy
+from ...competitors.mmd.dan import MultipleKernelMaximumMeanDiscrepancy
+from ...competitors.mmd.kernels import GaussianKernel
+from ...dataset import PixelSetData
+from ...evaluation import validation
+from ...transforms import Normalize, RandomSamplePixels, RandomSampleTimeSteps, ToTensor, RandomTemporalShift, Identity
+from ...utils.train_utils import AverageMeter, cat_samples, cycle, to_cuda
+from ...utils.metrics import accuracy
 
 
 def train_mmd(model, config, writer, val_loader, device, best_model_path, fold_num, splits):

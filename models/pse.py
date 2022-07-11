@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import copy
-from models.layers import LinearLayer
+from .layers import LinearLayer
 
 
 class PixelSetEncoder(nn.Module):
@@ -107,6 +107,7 @@ def masked_mean(x, mask):
     out = out.permute((1, 0))
     return out
 
+
 def masked_std(x, mask):
     m = masked_mean(x, mask)
 
@@ -118,13 +119,15 @@ def masked_std(x, mask):
     d = mask.sum(dim=-1)
     d[d == 1] = 2
 
-    out = (out ** 2).sum(dim=-1) / (d - 1)
-    out = torch.sqrt(out + 10e-32) # To ensure differentiability
+    out = (out**2).sum(dim=-1) / (d - 1)
+    out = torch.sqrt(out + 10e-32)  # To ensure differentiability
     out = out.permute(1, 0)
     return out
 
+
 def maximum(x, mask):
     return x.max(dim=-1)[0].squeeze()
+
 
 def minimum(x, mask):
     return x.min(dim=-1)[0].squeeze()

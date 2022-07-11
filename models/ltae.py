@@ -15,21 +15,22 @@ import torch.nn as nn
 import numpy as np
 import copy
 
-from models.layers import LinearLayer, get_positional_encoding
+from .layers import LinearLayer, get_positional_encoding
 
 
 class LTAE(nn.Module):
-    def __init__(self,
-                 in_channels=128,
-                 n_head=16,
-                 d_k=8,
-                 n_neurons=[256, 128],
-                 dropout=0.2,
-                 d_model=256,
-                 T=1000,
-                 max_temporal_shift=100,
-                 max_position=365,
-                 ):
+    def __init__(
+        self,
+        in_channels=128,
+        n_head=16,
+        d_k=8,
+        n_neurons=[256, 128],
+        dropout=0.2,
+        d_model=256,
+        T=1000,
+        max_temporal_shift=100,
+        max_position=365,
+    ):
         """
         Sequence-to-embedding encoder.
         Args:
@@ -61,7 +62,12 @@ class LTAE(nn.Module):
             self.d_model = in_channels
             self.inconv = None
 
-        self.positional_enc = nn.Embedding.from_pretrained(get_positional_encoding(max_position + 2*max_temporal_shift, self.d_model, T=T), freeze=True)
+        self.positional_enc = nn.Embedding.from_pretrained(
+            get_positional_encoding(
+                max_position + 2 * max_temporal_shift, self.d_model, T=T
+            ),
+            freeze=True,
+        )
         # not splitting positional encoding seems to adapt better
         # sin_tab = get_positional_encoding(max_position + 2*max_temporal_shift, self.d_model // n_head, T=T)
         # self.positional_enc = nn.Embedding.from_pretrained(torch.cat([sin_tab for _ in range(n_head)], dim=1), freeze=True)
@@ -69,9 +75,11 @@ class LTAE(nn.Module):
         # self.inlayernorm = nn.LayerNorm(self.in_channels)
         # self.outlayernorm = nn.LayerNorm(n_neurons[-1])
 
-        self.attention_heads = MultiHeadAttention(n_head=n_head, d_k=d_k, d_in=self.d_model)
+        self.attention_heads = MultiHeadAttention(
+            n_head=n_head, d_k=d_k, d_in=self.d_model
+        )
 
-        assert (self.n_neurons[0] == self.d_model)
+        assert self.n_neurons[0] == self.d_model
 
         layers = []
         for i in range(len(self.n_neurons) - 1):
@@ -97,7 +105,8 @@ class LTAE(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    ''' Multi-Head Attention module '''
+    """Multi-Head Attention module"""
+
     def __init__(self, n_head, d_k, d_in):
         super().__init__()
         self.n_head = n_head
@@ -112,12 +121,13 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(0.1)
         self.softmax = nn.Softmax(dim=-1)
 
-
     def forward(self, x):
         # Slightly more efficient re-implementation of LTAE
         B, T, C = x.size()
         q = self.query.repeat(B, 1, 1, 1).transpose(1, 2)  # (nh, hs) -> (B, nh, 1, d_k)
-        k = self.key(x).view(B, T, self.n_head, self.d_k).transpose(1, 2)  # (B, nh, T, d_k)
+        k = (
+            self.key(x).view(B, T, self.n_head, self.d_k).transpose(1, 2)
+        )  # (B, nh, T, d_k)
         v = x.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         # self-attend; (B, nh, 1, d_k) x (B, nh, d_k, T) -> (B, nh, 1, T)
         att = (q @ k.transpose(-2, -1)) / self.temperature

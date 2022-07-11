@@ -1,12 +1,19 @@
 from tqdm import tqdm
 import torch
 import torch.nn as nn
-import competitors.alda.loss as loss
-from dataset import PixelSetData
-from evaluation import validation
-from transforms import Normalize, RandomSamplePixels, RandomSampleTimeSteps, ToTensor, RandomTemporalShift, Identity
-from utils.metrics import accuracy
-from utils.train_utils import AverageMeter, cycle, to_cuda
+from ...competitors.alda import loss
+from ...dataset import PixelSetData
+from ...evaluation import validation
+from ...transforms import (
+    Normalize,
+    RandomSamplePixels,
+    RandomSampleTimeSteps,
+    ToTensor,
+    RandomTemporalShift,
+    Identity,
+)
+from ...utils.metrics import accuracy
+from ...utils.train_utils import AverageMeter, cycle, to_cuda
 from torchvision import transforms
 from torch.optim.lr_scheduler import LambdaLR
 from torch.optim.sgd import SGD
@@ -90,14 +97,16 @@ def train_alda(
             softmax_out = nn.Softmax(dim=1)(outputs)
 
             ad_out = ad_net(features)
-            adv_loss, reg_loss, correct_loss = loss.ALDA_loss(ad_out, labels_s,
-                    softmax_out, threshold=config.pseudo_threshold)
+            adv_loss, reg_loss, correct_loss = loss.ALDA_loss(
+                ad_out, labels_s, softmax_out, threshold=config.pseudo_threshold
+            )
 
             adv_weight = config.trade_off
             trade_off = calc_coeff(i, high=1.0)
 
-            transfer_loss = adv_weight * adv_loss + adv_weight * trade_off * correct_loss
-
+            transfer_loss = (
+                adv_weight * adv_loss + adv_weight * trade_off * correct_loss
+            )
 
             # reg_loss is only backward to the discriminator
             for param in model.parameters():
@@ -156,7 +165,9 @@ def get_data_loaders(splits, config):
         [
             RandomSamplePixels(config.num_pixels),
             RandomSampleTimeSteps(config.seq_length),
-            RandomTemporalShift(max_shift=config.max_shift_aug, p=config.shift_aug_p) if config.with_shift_aug else Identity(),
+            RandomTemporalShift(max_shift=config.max_shift_aug, p=config.shift_aug_p)
+            if config.with_shift_aug
+            else Identity(),
             Normalize(),
             ToTensor(),
         ]
@@ -188,25 +199,34 @@ def get_data_loaders(splits, config):
 
     return source_loader, target_loader
 
+
 def calc_coeff(iter_num, high=1.0, low=0.0, alpha=10.0, max_iter=10000.0):
-    return np.float(2.0 * (high - low) / (1.0 + np.exp(-alpha*iter_num / max_iter)) - (high - low) + low)
+    return np.float(
+        2.0 * (high - low) / (1.0 + np.exp(-alpha * iter_num / max_iter))
+        - (high - low)
+        + low
+    )
+
 
 def init_weights(m):
     classname = m.__class__.__name__
-    if classname.find('Conv2d') != -1 or classname.find('ConvTranspose2d') != -1:
+    if classname.find("Conv2d") != -1 or classname.find("ConvTranspose2d") != -1:
         nn.init.kaiming_uniform_(m.weight)
         nn.init.zeros_(m.bias)
-    elif classname.find('BatchNorm') != -1:
+    elif classname.find("BatchNorm") != -1:
         nn.init.normal_(m.weight, 1.0, 0.02)
         nn.init.zeros_(m.bias)
-    elif classname.find('Linear') != -1:
+    elif classname.find("Linear") != -1:
         nn.init.xavier_normal_(m.weight)
         nn.init.zeros_(m.bias)
 
+
 def grl_hook(coeff):
     def fun1(grad):
-        return -coeff*grad.clone()
+        return -coeff * grad.clone()
+
     return fun1
+
 
 class Multi_AdversarialNetwork(nn.Module):
     def __init__(self, in_feature, hidden_size, class_num):
@@ -231,7 +251,9 @@ class Multi_AdversarialNetwork(nn.Module):
         if self.training:
             self.iter_num += 1
         if grl and self.training:
-            coeff = calc_coeff(self.iter_num, self.high, self.low, self.alpha, self.max_iter)
+            coeff = calc_coeff(
+                self.iter_num, self.high, self.low, self.alpha, self.max_iter
+            )
             x = x * 1.0
             x.register_hook(grl_hook(coeff))
         x = self.ad_layer1(x)
@@ -249,5 +271,6 @@ class Multi_AdversarialNetwork(nn.Module):
     def get_parameters(self):
         return [{"params": self.parameters(), "lr": 1.0}]
 
-  # def get_parameters(self):
-  #   return [{"params":self.parameters(), "lr_mult":10, 'decay_mult':2}]
+
+# def get_parameters(self):
+#   return [{"params":self.parameters(), "lr_mult":10, 'decay_mult':2}]
