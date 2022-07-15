@@ -10,7 +10,7 @@ import random
 import numpy as np
 import torch
 import torch.backends.cudnn
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
 from torchvision.transforms import transforms
 from tqdm import tqdm
 
