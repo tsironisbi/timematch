@@ -67,8 +67,10 @@ class PixelSetData(data.Dataset):
 
     def __getitem__(self, index):
         path, parcel_idx, y, extra = self.samples[index]
+        
         pixels = zarr.load(path)  # (T, C, S)
-
+        if pixels is None:
+            print(path)
         sample = {
             "index": index,
             "parcel_index": parcel_idx,  # mapping to metadata

@@ -80,7 +80,7 @@ def main(config):
         config.fold_num = fold_num
 
         sample_pixels_val = config.sample_pixels_val or (
-            config.eval and config.temporal_shift
+            config.eval  # and config.temporal_shift
         )
         val_loader, test_loader = create_evaluation_loaders(
             config.target, splits, config, sample_pixels_val
@@ -248,6 +248,7 @@ def train_supervised(
             ToTensor(),
         ]
     )
+    print(train_transform)
     dataset_name = config.source
     if config.train_on_target:
         dataset_name = config.target
@@ -537,7 +538,7 @@ if __name__ == "__main__":
     # TODO
     parser.add_argument(
         "--with_shift_aug",
-        default=True,
+        default=False,
         action="store_true",
         help="whether to apply random temporal shift augmentation",
     )

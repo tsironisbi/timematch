@@ -4,6 +4,7 @@ SOURCE_MODEL=pseltae_32VNH
 SOURCE_TILE=32VNH
 SOURCE=denmark/$SOURCE_TILE/2017
 
+
 # Source-only
 python train.py -e $SOURCE_MODEL --source $SOURCE --target $SOURCE
 
