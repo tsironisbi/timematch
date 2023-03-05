@@ -134,7 +134,7 @@ class ToTensor(object):
         sample["valid_pixels"] = torch.from_numpy(
             sample["valid_pixels"].astype(np.float32)
         )
-        sample["positions"] = torch.from_numpy(sample["positions"].astype(np.long))  # type: ignore
+        sample["positions"] = torch.from_numpy(sample["positions"].astype(int))  # type: ignore
         if "extra" in sample:
             sample["extra"] = torch.from_numpy(sample["extra"].astype(np.float32))
         if isinstance(sample["label"], int):
